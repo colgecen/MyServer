@@ -50,7 +50,7 @@
 - [x] Implement model management UI (download, switch, delete, quantize)
 
 ## Phase 6: Packaging & Release
-- [ ] Build Tauri sidecar for daemon bundling
+- [x] Build Tauri sidecar for daemon bundling
 - [ ] Create installer packages: .deb, .rpm, .AppImage, .msi, .dmg
 - [ ] Implement auto-update mechanism (Tauri Updater)
 - [ ] Write release automation (GitHub Actions, signing, notarization)

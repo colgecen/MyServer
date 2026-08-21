@@ -1,0 +1,1 @@
+{ "sidecar": { "binary": "myserverd", "args": ["--port","4096"] } }
