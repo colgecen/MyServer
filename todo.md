@@ -75,7 +75,7 @@
 - [x] Define tool schema (exec_shell, read_file, search_index)
 - [x] Build agent loop with LLM tool calling
 - [x] Implement MCP-style tool registry and permission gate
-- [ ] Add multi-step plan executor with guardrail gating
+- [x] Add multi-step plan executor with guardrail gating
 - [ ] Build agent timeline UI (step list, tool outputs)
 - [ ] Write agent E2E simulation tests
 
