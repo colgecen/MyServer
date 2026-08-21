@@ -56,6 +56,36 @@
 - [x] Write release automation (GitHub Actions, signing, notarization)
 - [x] Final integration testing and performance profiling
 
+## Phase 7: Telemetry & Observability
+- [ ] Implement GPU/CPU/VRAM collectors (NVIDIA-SMI, sysfs fallback)
+- [ ] Build 1s polling loop with delta-based broadcast
+- [ ] Add WebSocket telemetry event via protocol/telemetry
+- [ ] Create ring buffer for telemetry history (last 300 samples)
+- [ ] Build frontend live telemetry charts integration
+- [ ] Write benchmarks for collector performance
+
+## Phase 8: Persistent Store & Session Memory
+- [ ] Design BoltDB schema for workspace/cache/audit
+- [ ] Implement KV store wrapper with transactions and TTL
+- [ ] Add chat session persistence (history, workspace binding)
+- [ ] Implement workspace snapshot and restore
+- [ ] Write store integration tests (crash recovery, concurrent writes)
+
+## Phase 9: Autonomous Agent & Tool Router
+- [ ] Define tool schema (exec_shell, read_file, search_index)
+- [ ] Build agent loop with LLM tool calling
+- [ ] Implement MCP-style tool registry and permission gate
+- [ ] Add multi-step plan executor with guardrail gating
+- [ ] Build agent timeline UI (step list, tool outputs)
+- [ ] Write agent E2E simulation tests
+
+## Phase 10: Hardening & Compliance
+- [ ] Implement RBAC and API token authentication
+- [ ] Add secrets redaction in logs and audit trails
+- [ ] Build signed audit trail (HMAC per entry)
+- [ ] Add compliance export (JSON/SIEM format)
+- [ ] Final chaos and recovery testing
+
 ---
 
 ## Workflow Rule: Mandatory Git Commits
@@ -84,6 +114,10 @@
 | 4 | ui | `feat(ui): implement reasoning panel with streaming output` |
 | 5 | llm | `feat(llm): integrate ollama client with master system prompt` |
 | 6 | pkg | `chore(release): package v1.14.33 for linux/windows/macos` |
+| 7 | telemetry | `feat(telemetry): implement GPU/VRAM collectors with polling` |
+| 8 | store | `feat(store): add BoltDB KV wrapper with TTL` |
+| 9 | agent | `feat(agent): build tool router with guardrail gating` |
+| 10 | security | `security(auth): implement RBAC and token auth` |
 
 ### Commit Rules
 1. **One logical change per commit** — don't bundle unrelated changes
