@@ -28,7 +28,7 @@
 - [x] Add rate limiting and anomaly detection for exec requests
 - [x] Build safe environment variable sanitization
 - [x] Implement dry-run mode for command preview
-- [ ] Write security test suite (penetration attempts, bypass vectors)
+- [x] Write security test suite (penetration attempts, bypass vectors)
 
 ## Phase 4: Cyberpunk UI / Frontend (Tauri + React)
 - [ ] Set up Tauri v2 project with React 18 + TypeScript
