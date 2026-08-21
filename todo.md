@@ -76,7 +76,7 @@
 - [x] Build agent loop with LLM tool calling
 - [x] Implement MCP-style tool registry and permission gate
 - [x] Add multi-step plan executor with guardrail gating
-- [ ] Build agent timeline UI (step list, tool outputs)
+- [x] Build agent timeline UI (step list, tool outputs)
 - [ ] Write agent E2E simulation tests
 
 ## Phase 10: Hardening & Compliance
