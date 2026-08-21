@@ -42,12 +42,14 @@
 - [ ] Implement theme persistence and accessibility (WCAG AA)
 - [ ] Write E2E tests for critical user flows
 
-## Phase 5: Local LLM Integration & Packaging
+## Phase 5: Local LLM Integration
 - [ ] Integrate Ollama API client (model pull, list, chat, embeddings)
 - [ ] Implement Master System Prompt injection
 - [ ] Build reasoning parser (thinking tags, tool calls, final output)
 - [ ] Add streaming response rendering in UI
 - [ ] Implement model management UI (download, switch, delete, quantize)
+
+## Phase 6: Packaging & Release
 - [ ] Build Tauri sidecar for daemon bundling
 - [ ] Create installer packages: .deb, .rpm, .AppImage, .msi, .dmg
 - [ ] Implement auto-update mechanism (Tauri Updater)
@@ -81,7 +83,7 @@
 | 4 | ui | `feat(ui): build cyberpunk glassmorphism design system` |
 | 4 | ui | `feat(ui): implement reasoning panel with streaming output` |
 | 5 | llm | `feat(llm): integrate ollama client with master system prompt` |
-| 5 | pkg | `chore(release): package v1.14.33 for linux/windows/macos` |
+| 6 | pkg | `chore(release): package v1.14.33 for linux/windows/macos` |
 
 ### Commit Rules
 1. **One logical change per commit** — don't bundle unrelated changes
