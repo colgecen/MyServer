@@ -137,7 +137,13 @@ func (w *Walker) Walk(ctx context.Context) (*Result, error) {
 	}
 
 	// second pass: read + hash in parallel
-	for _, e := range entries {
+	candidates := entries
+	var (
+		processed int
+		pmu       sync.Mutex
+	)
+	entries = make([]Entry, 0, len(candidates))
+	for _, e := range candidates {
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(e Entry) {
@@ -156,14 +162,15 @@ func (w *Walker) Walk(ctx context.Context) (*Result, error) {
 				}
 				return
 			}
-			mu.Lock()
-			entries = append(entries[:0], entry) // replace with enriched
-			mu.Unlock()
+			pmu.Lock()
+			entries = append(entries, entry)
+			processed++
+			pmu.Unlock()
 			if w.cfg.OnFile != nil {
 				w.cfg.OnFile(entry)
 			}
 			if w.cfg.ProgressFn != nil {
-				w.cfg.ProgressFn(len(entries), 1)
+				w.cfg.ProgressFn(processed, len(candidates))
 			}
 		}(e)
 	}
@@ -176,8 +183,13 @@ func (w *Walker) Walk(ctx context.Context) (*Result, error) {
 	}, nil
 }
 
-// shouldSkip checks .gitignore + default excludes.
+// shouldSkip checks .gitignore + default excludes + hidden entries.
 func (w *Walker) shouldSkip(rel string, isDir bool) bool {
+	// hidden files/dirs (.foo) are skipped; .gitignore is still parsed
+	// separately via compileIgnorePatterns
+	if strings.HasPrefix(filepath.Base(rel), ".") {
+		return true
+	}
 	// default excludes
 	for _, ex := range DefaultExcludes {
 		if matched, _ := filepath.Match(ex, filepath.Base(rel)); matched {

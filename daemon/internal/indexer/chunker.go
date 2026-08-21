@@ -64,9 +64,9 @@ func chunkGoAST(path string, lines []string) []Chunk {
 		if end < start {
 			return
 		}
-		// clamp and pad small gaps to keep context
-		start = clamp(start+1, 1, len(lines)) // ast lines are 1-based
-		end = clamp(end+1, 1, len(lines))
+		// ast line numbers are already 1-based; clamp into range
+		start = clamp(start, 1, len(lines))
+		end = clamp(end, 1, len(lines))
 		chunks = append(chunks, Chunk{
 			FilePath:  path,
 			StartLine: start,

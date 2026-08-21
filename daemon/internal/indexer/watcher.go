@@ -178,6 +178,9 @@ func (fw *FileWatcher) handle(ev fsnotify.Event) {
 }
 
 func (fw *FileWatcher) skipPath(rel string) bool {
+	if strings.HasPrefix(filepath.Base(rel), ".") {
+		return true
+	}
 	for _, ex := range DefaultExcludes {
 		base := filepath.Base(rel)
 		if matched, _ := filepath.Match(ex, base); matched {
