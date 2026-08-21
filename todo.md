@@ -40,7 +40,7 @@
 - [x] Implement WebSocket connection to daemon with reconnection logic
 - [x] Add keyboard shortcuts (Cmd/Ctrl+K, Cmd/Ctrl+Enter, etc.)
 - [x] Implement theme persistence and accessibility (WCAG AA)
-- [ ] Write E2E tests for critical user flows
+- [x] Write E2E tests for critical user flows
 
 ## Phase 5: Local LLM Integration
 - [ ] Integrate Ollama API client (model pull, list, chat, embeddings)
