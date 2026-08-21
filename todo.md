@@ -44,7 +44,7 @@
 
 ## Phase 5: Local LLM Integration
 - [x] Integrate Ollama API client (model pull, list, chat, embeddings)
-- [ ] Implement Master System Prompt injection
+- [x] Implement Master System Prompt injection
 - [ ] Build reasoning parser (thinking tags, tool calls, final output)
 - [ ] Add streaming response rendering in UI
 - [ ] Implement model management UI (download, switch, delete, quantize)
