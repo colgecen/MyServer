@@ -84,7 +84,7 @@
 - [x] Add secrets redaction in logs and audit trails
 - [x] Build signed audit trail (HMAC per entry)
 - [x] Add compliance export (JSON/SIEM format)
-- [ ] Final chaos and recovery testing
+- [x] Final chaos and recovery testing
 
 ---
 
