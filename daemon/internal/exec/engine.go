@@ -87,10 +87,12 @@ func (e *Engine) Run(ctx context.Context, opts Options, onEvent func(StreamEvent
 	defer cancel()
 
 	shell, shellArgs := pickShell(opts.Shell)
-	cmd := exec.CommandContext(cctx, shell, shellArgs...)
+	args := append(shellArgs, opts.Command)
+	cmd := exec.Command(shell, args...)
 	cmd.Dir = opts.Workdir
 	cmd.Env = composeEnv(opts.Env)
 	setProcessGroup(cmd)
+	cmd.WaitDelay = 2 * time.Second
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -105,6 +107,17 @@ func (e *Engine) Run(ctx context.Context, opts Options, onEvent func(StreamEvent
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start: %w", err)
 	}
+
+	// Manual timeout: SIGKILL the process group when the context fires.
+	timedOut := make(chan struct{})
+	go func() {
+		select {
+		case <-cctx.Done():
+			_ = killProcessTree(cmd)
+			close(timedOut)
+		case <-timedOut:
+		}
+	}()
 
 	h := &cmdHandle{cmd: cmd}
 	e.mu.Lock()
@@ -146,6 +159,14 @@ func (e *Engine) Run(ctx context.Context, opts Options, onEvent func(StreamEvent
 	waitErr := cmd.Wait()
 	wg.Wait()
 
+	// If our timeout goroutine fired, prefer reporting that over the raw wait err.
+	select {
+	case <-timedOut:
+		res := &Result{Duration: time.Since(start), Truncated: truncated, ExitCode: -1}
+		emit(StreamEvent{Stream: "system", Err: context.DeadlineExceeded, Done: true})
+		return res, context.DeadlineExceeded
+	default:
+	}
 	res := &Result{Duration: time.Since(start), Truncated: truncated}
 	if waitErr != nil {
 		var ee *exec.ExitError
@@ -185,14 +206,14 @@ type cmdHandle struct {
 func pickShell(requested string) (string, []string) {
 	switch requested {
 	case "bash":
-		return "bash", []string{"-lc"}
+		return "bash", []string{"-c"}
 	case "powershell":
 		return "powershell", []string{"-NoProfile", "-NonInteractive", "-Command"}
 	}
 	if runtime.GOOS == "windows" {
 		return "powershell", []string{"-NoProfile", "-NonInteractive", "-Command"}
 	}
-	return "bash", []string{"-lc"}
+	return "bash", []string{"-c"}
 }
 
 func composeEnv(extra []string) []string {
