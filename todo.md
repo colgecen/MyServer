@@ -51,7 +51,7 @@
 
 ## Phase 6: Packaging & Release
 - [x] Build Tauri sidecar for daemon bundling
-- [ ] Create installer packages: .deb, .rpm, .AppImage, .msi, .dmg
+- [x] Create installer packages: .deb, .rpm, .AppImage, .msi, .dmg
 - [ ] Implement auto-update mechanism (Tauri Updater)
 - [ ] Write release automation (GitHub Actions, signing, notarization)
 - [ ] Final integration testing and performance profiling
