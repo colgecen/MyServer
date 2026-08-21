@@ -72,7 +72,7 @@
 - [x] Write store integration tests (crash recovery, concurrent writes)
 
 ## Phase 9: Autonomous Agent & Tool Router
-- [ ] Define tool schema (exec_shell, read_file, search_index)
+- [x] Define tool schema (exec_shell, read_file, search_index)
 - [ ] Build agent loop with LLM tool calling
 - [ ] Implement MCP-style tool registry and permission gate
 - [ ] Add multi-step plan executor with guardrail gating
