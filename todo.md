@@ -68,7 +68,7 @@
 - [x] Design BoltDB schema for workspace/cache/audit
 - [x] Implement KV store wrapper with transactions and TTL
 - [x] Add chat session persistence (history, workspace binding)
-- [ ] Implement workspace snapshot and restore
+- [x] Implement workspace snapshot and restore
 - [ ] Write store integration tests (crash recovery, concurrent writes)
 
 ## Phase 9: Autonomous Agent & Tool Router
