@@ -27,7 +27,7 @@
 - [x] Implement audit logging (command, user, timestamp, result, risk level)
 - [x] Add rate limiting and anomaly detection for exec requests
 - [x] Build safe environment variable sanitization
-- [ ] Implement dry-run mode for command preview
+- [x] Implement dry-run mode for command preview
 - [ ] Write security test suite (penetration attempts, bypass vectors)
 
 ## Phase 4: Cyberpunk UI / Frontend (Tauri + React)
