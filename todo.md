@@ -38,7 +38,7 @@
 - [x] Build Main Canvas: reasoning panel, code/command blocks, RUN COMMAND button
 - [x] Build Input HUD: oval prompt bar, file/folder attach, terminal exec shortcut
 - [x] Implement WebSocket connection to daemon with reconnection logic
-- [ ] Add keyboard shortcuts (Cmd/Ctrl+K, Cmd/Ctrl+Enter, etc.)
+- [x] Add keyboard shortcuts (Cmd/Ctrl+K, Cmd/Ctrl+Enter, etc.)
 - [ ] Implement theme persistence and accessibility (WCAG AA)
 - [ ] Write E2E tests for critical user flows
 
