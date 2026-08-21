@@ -62,7 +62,7 @@
 - [x] Add WebSocket telemetry event via protocol/telemetry
 - [x] Create ring buffer for telemetry history (last 300 samples)
 - [x] Build frontend live telemetry charts integration
-- [ ] Write benchmarks for collector performance
+- [x] Write benchmarks for collector performance
 
 ## Phase 8: Persistent Store & Session Memory
 - [ ] Design BoltDB schema for workspace/cache/audit
