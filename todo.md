@@ -83,7 +83,7 @@
 - [x] Implement RBAC and API token authentication
 - [x] Add secrets redaction in logs and audit trails
 - [x] Build signed audit trail (HMAC per entry)
-- [ ] Add compliance export (JSON/SIEM format)
+- [x] Add compliance export (JSON/SIEM format)
 - [ ] Final chaos and recovery testing
 
 ---
