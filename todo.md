@@ -46,7 +46,7 @@
 - [x] Integrate Ollama API client (model pull, list, chat, embeddings)
 - [x] Implement Master System Prompt injection
 - [x] Build reasoning parser (thinking tags, tool calls, final output)
-- [ ] Add streaming response rendering in UI
+- [x] Add streaming response rendering in UI
 - [ ] Implement model management UI (download, switch, delete, quantize)
 
 ## Phase 6: Packaging & Release
