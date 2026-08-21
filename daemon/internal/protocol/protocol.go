@@ -82,6 +82,7 @@ type ExecStreamEvent struct {
 	Data      string `json:"data,omitempty"`
 	ExitCode  *int   `json:"exit_code,omitempty"`
 	Done      bool   `json:"done,omitempty"`
+	Err       string `json:"err,omitempty"`
 }
 
 // ExecApprove is sent by the GUI to confirm a pending Level 1/2 command.

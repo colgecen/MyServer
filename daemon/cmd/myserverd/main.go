@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/anomalyco/myserver/daemon/internal/app"
 	"github.com/anomalyco/myserver/daemon/internal/server"
 )
 
@@ -29,6 +30,7 @@ func main() {
 		Addr:    *addr,
 		Version: version,
 	})
+	application := app.New(srv)
 
 	if err := srv.Start(ctx); err != nil {
 		log.Fatalf("server start failed: %v", err)
@@ -45,6 +47,7 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		log.Printf("graceful shutdown error: %v", err)
 	}
+	application.Shutdown()
 	log.Print("myserverd stopped")
 }
 
