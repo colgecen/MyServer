@@ -36,7 +36,7 @@
 - [x] Build Header Bar: version badge, model selector, GPU/VRAM telemetry charts
 - [x] Build Left Sidebar: chat history, workspace selector, model downloader
 - [x] Build Main Canvas: reasoning panel, code/command blocks, RUN COMMAND button
-- [ ] Build Input HUD: oval prompt bar, file/folder attach, terminal exec shortcut
+- [x] Build Input HUD: oval prompt bar, file/folder attach, terminal exec shortcut
 - [ ] Implement WebSocket connection to daemon with reconnection logic
 - [ ] Add keyboard shortcuts (Cmd/Ctrl+K, Cmd/Ctrl+Enter, etc.)
 - [ ] Implement theme persistence and accessibility (WCAG AA)
