@@ -67,7 +67,7 @@
 ## Phase 8: Persistent Store & Session Memory
 - [x] Design BoltDB schema for workspace/cache/audit
 - [x] Implement KV store wrapper with transactions and TTL
-- [ ] Add chat session persistence (history, workspace binding)
+- [x] Add chat session persistence (history, workspace binding)
 - [ ] Implement workspace snapshot and restore
 - [ ] Write store integration tests (crash recovery, concurrent writes)
 
