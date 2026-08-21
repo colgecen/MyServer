@@ -1,24 +1,24 @@
 # MyServer Development Todo List
 
 ## Phase 1: Core Daemon & Execution Engine
-- [ ] Initialize Go/Node.js daemon project structure
-- [ ] Implement HTTP/WebSocket server on 127.0.0.1:4096
-- [ ] Build command execution pipeline (Bash/PowerShell)
-- [ ] Implement request/response protocol (JSON over WebSocket)
-- [ ] Add process management (spawn, monitor, kill, stdout/stderr streaming)
-- [ ] Implement workspace path validation and sandboxing
-- [ ] Add daemon health check and auto-restart logic
-- [ ] Write integration tests for command execution flow
+- [x] Initialize Go/Node.js daemon project structure
+- [x] Implement HTTP/WebSocket server on 127.0.0.1:4096
+- [x] Build command execution pipeline (Bash/PowerShell)
+- [x] Implement request/response protocol (JSON over WebSocket)
+- [x] Add process management (spawn, monitor, kill, stdout/stderr streaming)
+- [x] Implement workspace path validation and sandboxing
+- [x] Add daemon health check and auto-restart logic
+- [x] Write integration tests for command execution flow
 
 ## Phase 2: Workspace Indexer & Context Injection
-- [ ] Implement recursive directory walker with ignore patterns (.gitignore, node_modules, etc.)
-- [ ] Build file type detection and language mapping
-- [ ] Create semantic code chunking (AST-based for supported languages)
-- [ ] Implement vector embedding pipeline (local embeddings via Ollama/llama.cpp)
-- [ ] Build context window management (token budgeting, sliding window)
-- [ ] Add file watcher for live index updates
-- [ ] Implement workspace selection IPC (Frontend ↔ Daemon)
-- [ ] Write unit tests for indexer accuracy and performance
+- [x] Implement recursive directory walker with ignore patterns (.gitignore, node_modules, etc.)
+- [x] Build file type detection and language mapping
+- [x] Create semantic code chunking (AST-based for supported languages)
+- [x] Implement vector embedding pipeline (local embeddings via Ollama/llama.cpp)
+- [x] Build context window management (token budgeting, sliding window)
+- [x] Add file watcher for live index updates
+- [x] Implement workspace selection IPC (Frontend ↔ Daemon)
+- [x] Write unit tests for indexer accuracy and performance
 
 ## Phase 3: Security Guardrails & SafeExec Module
 - [ ] Implement Regex-based Forbidden Command List (Blacklist Engine)
