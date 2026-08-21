@@ -31,7 +31,7 @@
 - [x] Write security test suite (penetration attempts, bypass vectors)
 
 ## Phase 4: Cyberpunk UI / Frontend (Tauri + React)
-- [ ] Set up Tauri v2 project with React 18 + TypeScript
+- [x] Set up Tauri v2 project with React 18 + TypeScript
 - [ ] Implement design system: colors, glassmorphism, neon accents, typography
 - [ ] Build Header Bar: version badge, model selector, GPU/VRAM telemetry charts
 - [ ] Build Left Sidebar: chat history, workspace selector, model downloader
