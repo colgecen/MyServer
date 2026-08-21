@@ -22,7 +22,7 @@
 
 ## Phase 3: Security Guardrails & SafeExec Module
 - [x] Implement Regex-based Forbidden Command List (Blacklist Engine)
-- [ ] Build command classification: READ_ONLY / WORKSPACE_WRITE / FULL_SYSTEM_EXEC
+- [x] Build command classification: READ_ONLY / WORKSPACE_WRITE / FULL_SYSTEM_EXEC
 - [ ] Add mandatory user confirmation UI for Level 1 & 2 commands
 - [ ] Implement audit logging (command, user, timestamp, result, risk level)
 - [ ] Add rate limiting and anomaly detection for exec requests
