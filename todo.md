@@ -58,7 +58,7 @@
 
 ## Phase 7: Telemetry & Observability
 - [x] Implement GPU/CPU/VRAM collectors (NVIDIA-SMI, sysfs fallback)
-- [ ] Build 1s polling loop with delta-based broadcast
+- [x] Build 1s polling loop with delta-based broadcast
 - [ ] Add WebSocket telemetry event via protocol/telemetry
 - [ ] Create ring buffer for telemetry history (last 300 samples)
 - [ ] Build frontend live telemetry charts integration
