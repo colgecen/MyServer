@@ -47,7 +47,7 @@
 - [x] Implement Master System Prompt injection
 - [x] Build reasoning parser (thinking tags, tool calls, final output)
 - [x] Add streaming response rendering in UI
-- [ ] Implement model management UI (download, switch, delete, quantize)
+- [x] Implement model management UI (download, switch, delete, quantize)
 
 ## Phase 6: Packaging & Release
 - [ ] Build Tauri sidecar for daemon bundling
