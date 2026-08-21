@@ -61,7 +61,7 @@
 - [x] Build 1s polling loop with delta-based broadcast
 - [x] Add WebSocket telemetry event via protocol/telemetry
 - [x] Create ring buffer for telemetry history (last 300 samples)
-- [ ] Build frontend live telemetry charts integration
+- [x] Build frontend live telemetry charts integration
 - [ ] Write benchmarks for collector performance
 
 ## Phase 8: Persistent Store & Session Memory
