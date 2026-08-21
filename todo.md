@@ -33,7 +33,7 @@
 ## Phase 4: Cyberpunk UI / Frontend (Tauri + React)
 - [x] Set up Tauri v2 project with React 18 + TypeScript
 - [x] Implement design system: colors, glassmorphism, neon accents, typography
-- [ ] Build Header Bar: version badge, model selector, GPU/VRAM telemetry charts
+- [x] Build Header Bar: version badge, model selector, GPU/VRAM telemetry charts
 - [ ] Build Left Sidebar: chat history, workspace selector, model downloader
 - [ ] Build Main Canvas: reasoning panel, code/command blocks, RUN COMMAND button
 - [ ] Build Input HUD: oval prompt bar, file/folder attach, terminal exec shortcut
