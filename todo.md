@@ -80,7 +80,7 @@
 - [x] Write agent E2E simulation tests
 
 ## Phase 10: Hardening & Compliance
-- [ ] Implement RBAC and API token authentication
+- [x] Implement RBAC and API token authentication
 - [ ] Add secrets redaction in logs and audit trails
 - [ ] Build signed audit trail (HMAC per entry)
 - [ ] Add compliance export (JSON/SIEM format)
