@@ -43,7 +43,7 @@
 - [x] Write E2E tests for critical user flows
 
 ## Phase 5: Local LLM Integration
-- [ ] Integrate Ollama API client (model pull, list, chat, embeddings)
+- [x] Integrate Ollama API client (model pull, list, chat, embeddings)
 - [ ] Implement Master System Prompt injection
 - [ ] Build reasoning parser (thinking tags, tool calls, final output)
 - [ ] Add streaming response rendering in UI
