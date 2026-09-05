@@ -1,103 +1,71 @@
-import { useState, useCallback, KeyboardEvent } from "react";
-import type { DaemonEnvelope } from "../lib/ws";
+import { useState, useCallback } from "react";
 
 type Props = {
-  onSend?: (envelope: unknown) => void;
+  onSend: (msg: unknown) => void;
   disabled?: boolean;
+  workspacePath?: string;
 };
 
-export default function InputHUD({ onSend, disabled = false }: Props) {
-  const [prompt, setPrompt] = useState("");
+export default function InputHUD({ onSend, disabled, workspacePath }: Props) {
+  const [cmd, setCmd] = useState("");
 
   const handleSend = useCallback(() => {
-    if (!prompt.trim() || !onSend) return;
-    const text = prompt.trim();
-    setPrompt("");
+    if (!cmd.trim() || disabled) return;
     onSend({
-      id: `chat-${Date.now()}`,
+      id: `cmd-${Date.now()}`,
       type: "request",
       action: "exec_command",
       payload: {
-        command: text,
+        command: cmd.trim(),
         shell: "bash",
-        workdir: "",
+        workdir: workspacePath || "",
       },
     });
-  }, [prompt, onSend]);
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    },
-    [handleSend],
-  );
+    setCmd("");
+  }, [cmd, disabled, onSend, workspacePath]);
 
   return (
-    <footer
-      className="glass"
-      style={{
-        margin: 16,
-        padding: 12,
-        borderRadius: 24,
-        display: "flex",
-        gap: 8,
-        alignItems: "center",
-      }}
-      data-testid="input-hud"
-    >
+    <footer style={{
+      padding: "12px 20px",
+      borderTop: "1px solid rgba(255,255,255,0.06)",
+      display: "flex",
+      gap: 8,
+    }} data-testid="input-hud">
       <input
-        aria-label="prompt"
-        value={prompt}
-        onChange={e => setPrompt(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={disabled ? "Daemon disconnected..." : "Ask or type a command..."}
+        value={cmd}
+        onChange={e => setCmd(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === "Enter") handleSend();
+        }}
+        placeholder={disabled ? "Daemon offline..." : "Enter command..."}
         disabled={disabled}
         style={{
           flex: 1,
-          padding: "12px 16px",
-          borderRadius: 999,
-          border: "1px solid var(--border)",
-          background: "var(--glass)",
-          color: "var(--text)",
+          padding: "10px 14px",
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.1)",
+          background: "rgba(0,0,0,0.3)",
+          color: "#fff",
           fontSize: 14,
           outline: "none",
         }}
       />
-      <label
-        style={{
-          padding: "8px 12px",
-          borderRadius: 999,
-          border: "1px solid var(--border)",
-          cursor: disabled ? "not-allowed" : "pointer",
-          opacity: disabled ? 0.5 : 1,
-        }}
-      >
-        Attach
-        <input
-          type="file"
-          hidden
-          disabled={disabled}
-          data-testid="file-attach"
-        />
-      </label>
       <button
         onClick={handleSend}
-        disabled={disabled || !prompt.trim()}
-        aria-label="execute command"
+        disabled={disabled || !cmd.trim()}
         style={{
-          padding: "10px 16px",
-          borderRadius: 999,
-          background: "var(--neon-violet)",
+          padding: "10px 20px",
+          borderRadius: 8,
+          background: disabled || !cmd.trim() ? "rgba(255,255,255,0.05)" : "#00b4d8",
           color: "#fff",
           border: "none",
-          cursor: disabled || !prompt.trim() ? "wait" : "pointer",
-          opacity: disabled || !prompt.trim() ? 0.5 : 1,
+          cursor: disabled || !cmd.trim() ? "default" : "pointer",
+          fontSize: 13,
+          fontWeight: 600,
+          opacity: disabled || !cmd.trim() ? 0.5 : 1,
         }}
       >
-        ↵
+        Run
       </button>
     </footer>
   );

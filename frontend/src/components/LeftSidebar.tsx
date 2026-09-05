@@ -1,186 +1,109 @@
-import { useState } from "react";
-import { useWebSocket } from "../hooks/useWebSocket";
-import type { DaemonEnvelope } from "../lib/ws";
+import { useState, useEffect } from "react";
+import type { DaemonMessage } from "../lib/ws";
 
 type Props = {
-  onSend?: (envelope: unknown) => void;
+  workspacePath: string;
+  onWorkspaceChange: (path: string) => void;
+  onSend: (msg: unknown) => void;
+  messages: DaemonMessage[];
 };
 
-export default function LeftSidebar({ onSend }: Props) {
-  const [workspace, setWorkspace] = useState("");
+export default function LeftSidebar({ workspacePath, onWorkspaceChange, onSend, messages }: Props) {
   const [indexing, setIndexing] = useState(false);
-  const [indexStatus, setIndexStatus] = useState("");
-  const { onMessage } = useWebSocket();
+  const [indexMsg, setIndexMsg] = useState("");
 
-  // Listen for index workspace events
-  onMessage((msg) => {
-    const env = msg as DaemonEnvelope;
-    if (env.action === "index_workspace" && env.payload) {
-      const p = env.payload as { phase: string; files_done: number; files_total: number; chunks: number; message?: string };
-      if (p.phase === "done") {
-        setIndexing(false);
-        setIndexStatus(`Indexed ${p.files_done} files, ${p.chunks} chunks`);
-      } else if (p.phase === "walking") {
-        setIndexing(true);
-        setIndexStatus("Scanning files...");
+  useEffect(() => {
+    for (const msg of messages) {
+      const env = msg as Record<string, unknown>;
+      if (env.type === "event" && (env.action as string) === "index_workspace") {
+        const p = (env.payload as Record<string, unknown>) || {};
+        if (p.phase === "done") {
+          setIndexing(false);
+          setIndexMsg(`Indexed ${p.files_done} files`);
+        } else if (p.phase === "walking") {
+          setIndexing(true);
+          setIndexMsg("Scanning...");
+        } else if (p.phase === "chunking") {
+          setIndexMsg("Reading files...");
+        } else if (p.phase === "embedding") {
+          setIndexMsg("Indexing...");
+        }
       }
     }
-  });
+  }, [messages]);
 
-  const handleWorkspaceSelect = () => {
-    if (!workspace.trim() || !onSend) return;
+  const handleIndex = () => {
+    if (!workspacePath.trim()) return;
     onSend({
-      id: `ws-pick-${Date.now()}`,
+      id: `wp-${Date.now()}`,
       type: "request",
       action: "workspace_pick",
-      payload: { path: workspace.trim() },
+      payload: { path: workspacePath.trim() },
     });
     setIndexing(true);
-    setIndexStatus("Starting indexing...");
+    setIndexMsg("Starting...");
   };
-
-  const handlePickFolder = async () => {
-    // Use Tauri's native dialog or a simple prompt
-    const path = prompt("Enter workspace path:", workspace);
-    if (path) {
-      setWorkspace(path);
-      onSend?.({
-        id: `ws-pick-${Date.now()}`,
-        type: "request",
-        action: "workspace_pick",
-        payload: { path: path.trim() },
-      });
-      setIndexing(true);
-      setIndexStatus("Starting indexing...");
-    }
-  };
-
-  const chats = [
-    { id: "1", title: "Explain walker" },
-    { id: "2", title: "Guardrail bypass check" },
-  ];
 
   return (
-    <aside
-      className="glass"
-      style={{
-        width: 280,
-        padding: 12,
-        borderRadius: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-      }}
-      data-testid="left-sidebar"
-    >
-      <section aria-label="workspace selector">
-        <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 6 }}>
+    <aside className="glass" style={{
+      width: 260,
+      padding: 16,
+      display: "flex",
+      flexDirection: "column",
+      gap: 20,
+      borderRight: "1px solid rgba(255,255,255,0.06)",
+    }} data-testid="left-sidebar">
+      <section>
+        <label style={{ fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>
           Workspace
         </label>
-        <div style={{ display: "flex", gap: 6 }}>
-          <input
-            value={workspace}
-            onChange={e => setWorkspace(e.target.value)}
-            placeholder="/path/to/workspace"
-            aria-label="workspace path"
-            style={{
-              flex: 1,
-              padding: "8px 10px",
-              borderRadius: 8,
-              border: "1px solid var(--border)",
-              background: "var(--glass)",
-              color: "var(--text)",
-              fontSize: 12,
-            }}
-            onKeyDown={e => {
-              if (e.key === "Enter") handleWorkspaceSelect();
-            }}
-          />
-          <button
-            onClick={handlePickFolder}
-            title="Browse folder"
-            style={{
-              padding: "8px 10px",
-              borderRadius: 8,
-              border: "1px solid var(--border)",
-              background: "var(--glass)",
-              color: "var(--neon-cyan)",
-              cursor: "pointer",
-            }}
-          >
-            📁
-          </button>
-        </div>
+        <input
+          value={workspacePath}
+          onChange={e => onWorkspaceChange(e.target.value)}
+          placeholder="/home/user/project"
+          onKeyDown={e => e.key === "Enter" && handleIndex()}
+          style={{
+            width: "100%",
+            padding: "8px 10px",
+            borderRadius: 6,
+            border: "1px solid rgba(255,255,255,0.1)",
+            background: "rgba(0,0,0,0.3)",
+            color: "#fff",
+            fontSize: 13,
+            boxSizing: "border-box",
+            outline: "none",
+          }}
+        />
         <button
-          onClick={handleWorkspaceSelect}
-          disabled={!workspace.trim() || indexing}
+          onClick={handleIndex}
+          disabled={!workspacePath.trim() || indexing}
           style={{
             width: "100%",
             marginTop: 6,
-            padding: "8px 12px",
-            borderRadius: 8,
-            background: indexing
-              ? "var(--glass)"
-              : "linear-gradient(90deg,var(--neon-cyan),var(--neon-violet))",
+            padding: "8px",
+            borderRadius: 6,
+            background: indexing ? "rgba(255,255,255,0.05)" : "#00b4d8",
             color: "#fff",
-            border: "1px solid var(--neon-cyan)",
-            cursor: indexing ? "wait" : "pointer",
+            border: "none",
+            cursor: indexing ? "default" : "pointer",
             fontSize: 12,
-            opacity: indexing ? 0.7 : 1,
+            opacity: indexing ? 0.6 : 1,
           }}
         >
-          {indexing ? "⏳ Indexing..." : "Select Workspace"}
+          {indexing ? "Indexing..." : "Select"}
         </button>
-        {indexStatus && (
-          <p style={{ fontSize: 11, color: "var(--neon-cyan)", marginTop: 4 }}>
-            {indexStatus}
-          </p>
+        {indexMsg && (
+          <p style={{ fontSize: 11, color: "#00b4d8", marginTop: 4 }}>{indexMsg}</p>
         )}
       </section>
 
-      <section aria-label="chat history">
-        <h3 style={{ fontSize: 12, color: "var(--muted)", margin: "8px 0" }}>
+      <section>
+        <label style={{ fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>
           History
-        </h3>
-        {chats.map(c => (
-          <div
-            key={c.id}
-            tabIndex={0}
-            style={{
-              padding: "8px 10px",
-              borderRadius: 8,
-              background: "var(--glass)",
-              border: "1px solid var(--border)",
-              marginBottom: 6,
-              cursor: "pointer",
-              color: "var(--text)",
-              fontSize: 13,
-            }}
-          >
-            {c.title}
-          </div>
-        ))}
-      </section>
-
-      <section aria-label="model downloader">
-        <h3 style={{ fontSize: 12, color: "var(--muted)", margin: "8px 0" }}>
-          Models
-        </h3>
-        <button
-          style={{
-            width: "100%",
-            padding: "8px 12px",
-            borderRadius: 8,
-            background:
-              "linear-gradient(90deg,var(--neon-cyan),var(--neon-violet))",
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 12,
-          }}
-        >
-          Download Model
-        </button>
+        </label>
+        <p style={{ fontSize: 12, color: "#555", fontStyle: "italic" }}>
+          No commands yet
+        </p>
       </section>
     </aside>
   );

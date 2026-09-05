@@ -1,16 +1,13 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { ReasoningPanel } from "./ReasoningPanel";
-import { CodeBlock } from "./CodeBlock";
-import { useWebSocket } from "../hooks/useWebSocket";
-import type { DaemonEnvelope } from "../lib/ws";
+import { useEffect, useState } from "react";
+import type { DaemonMessage } from "../lib/ws";
 
-type MessageEntry = {
+type ExecEntry = {
   id: string;
-  type: "user" | "assistant" | "system";
-  reasoning?: string;
-  code?: string;
-  language?: string;
-  stream?: string;
+  cmd: string;
+  output: string;
+  exitCode: number;
+  done: boolean;
+  level: number;
 };
 
 type PendingConfirm = {
@@ -21,212 +18,198 @@ type PendingConfirm = {
 };
 
 type Props = {
-  onSend?: (envelope: unknown) => void;
+  messages: DaemonMessage[];
+  execHistory: {id: string; cmd: string; output: string; level: number}[];
+  onSend: (msg: unknown) => void;
 };
 
-export default function MainCanvas({ onSend }: Props) {
-  const [messages, setMessages] = useState<MessageEntry[]>([]);
-  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
-  const [reasoning, setReasoning] = useState<string>("");
-  const [streamingText, setStreamingText] = useState<string>("");
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const { onMessage } = useWebSocket();
+export default function MainCanvas({ messages, execHistory, onSend }: Props) {
+  const [entries, setEntries] = useState<ExecEntry[]>([]);
+  const [pending, setPending] = useState<PendingConfirm | null>(null);
 
-  // Auto-scroll to bottom
   useEffect(() => {
-    if (canvasRef.current) {
-      canvasRef.current.scrollTop = canvasRef.current.scrollHeight;
+    const last = messages[messages.length - 1];
+    if (!last || typeof last === "string") return;
+
+    const env = last as Record<string, unknown>;
+
+    // Confirmation event from guardrail
+    if (env.type === "event" && (env.action as string) === "exec_command") {
+      const p = env.payload as Record<string, unknown>;
+      if (p && p.request_id && p.command) {
+        setPending({
+          request_id: p.request_id as string,
+          command: p.command as string,
+          level: p.level as number,
+          classification: p.classification as string,
+        });
+      }
+      return;
     }
-  }, [messages, reasoning, streamingText]);
 
-  // Listen for all WS messages
-  onMessage((msg) => {
-    const env = msg as DaemonEnvelope;
+    // Stream events
+    if (env.type === "stream") {
+      const p = env.payload as Record<string, unknown>;
+      if (!p) return;
+      const reqId = p.request_id as string;
+      const stream = p.stream as string;
+      const data = p.data as string;
+      const done = p.done as boolean;
+      const exitCode = p.exit_code as number;
 
-    // Confirmation request from guardrail
-    if (env.action === "exec_command" && env.payload) {
-      const p = env.payload as PendingConfirm;
-      if (p.request_id && p.command) {
-        setPendingConfirm(p);
-        setMessages(prev => [
-          ...prev,
-          {
-            id: `confirm-${p.request_id}`,
-            type: "system",
-            code: p.command,
-          },
-        ]);
+      setEntries(prev => {
+        const existing = prev.find(e => e.id === reqId);
+        if (existing) {
+          if (done) {
+            return prev.map(e => e.id === reqId ? {...e, done: true, exitCode: exitCode ?? 0} : e);
+          }
+          return prev.map(e => e.id === reqId ? {...e, output: e.output + (data || "")} : e);
+        }
+        if (!done) {
+          return [...prev, {id: reqId, cmd: "", output: data || "", exitCode: 0, done: false, level: 0}];
+        }
+        return prev;
+      });
+      return;
+    }
+
+    // Response for auto-execute (L0) - start entry
+    if (env.type === "response") {
+      const p = env.payload as Record<string, unknown>;
+      if (p && p.status === "ok" && env.id && !entries.find(e => e.id === env.id)) {
+        // Will be populated by stream
       }
     }
+  }, [messages]);
 
-    // Stream events (exec_command response)
-    if (env.type === "stream" && env.payload) {
-      const p = env.payload as {
-        request_id: string;
-        stream: string;
-        data: string;
-        exit_code: number;
-        done: boolean;
-        err: string;
-      };
-      if (p.stream === "stdout" && p.data) {
-        setStreamingText(prev => prev + p.data);
-      } else if (p.stream === "system" && p.done) {
-        // Execution complete
-        setMessages(prev => [
-          ...prev,
-          {
-            id: `exec-${p.request_id}`,
-            type: "system",
-            code: streamingText || "(no output)",
-            language: "bash",
-          },
-        ]);
-        setStreamingText("");
-      }
-    }
-
-    // Index workspace events
-    if (env.action === "index_workspace" && env.payload) {
-      const p = env.payload as { phase: string; message?: string };
-      if (p.phase === "walking") {
-        setReasoning("🔍 Scanning workspace...");
-      } else if (p.phase === "chunking") {
-        setReasoning("📄 Analyzing file contents...");
-      } else if (p.phase === "embedding") {
-        setReasoning("🧠 Generating embeddings...");
-      } else if (p.phase === "done") {
-        setReasoning("");
-      }
-    }
-  });
-
-  const handleApprove = useCallback(() => {
-    if (!pendingConfirm || !onSend) return;
+  const handleApprove = () => {
+    if (!pending) return;
     onSend({
       id: `approve-${Date.now()}`,
       type: "request",
       action: "exec_approve",
-      payload: { request_id: pendingConfirm.request_id, approve: true },
+      payload: { request_id: pending.request_id, approve: true },
     });
-    setPendingConfirm(null);
-  }, [pendingConfirm, onSend]);
+    setPending(null);
+  };
 
-  const handleDeny = useCallback(() => {
-    if (!pendingConfirm || !onSend) return;
+  const handleDeny = () => {
+    if (!pending) return;
     onSend({
       id: `deny-${Date.now()}`,
       type: "request",
       action: "exec_approve",
-      payload: { request_id: pendingConfirm.request_id, approve: false },
+      payload: { request_id: pending.request_id, approve: false },
     });
-    setPendingConfirm(null);
-  }, [pendingConfirm, onSend]);
+    setPending(null);
+  };
 
   return (
-    <main
-      ref={canvasRef}
-      style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        padding: 16,
-        overflowY: "auto",
-      }}
-      data-testid="main-canvas"
-    >
-      {/* Render message history */}
-      {messages.map(m => {
-        if (m.type === "system" && m.code) {
-          return (
-            <div key={m.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <CodeBlock code={m.code} language={m.language || "bash"} />
-            </div>
-          );
-        }
-        if (m.type === "assistant" || m.type === "user") {
-          return (
-            <div key={m.id}>
-              {m.reasoning && <ReasoningPanel thinking={m.reasoning} />}
-              {m.code && <CodeBlock code={m.code} language={m.language || "bash"} />}
-            </div>
-          );
-        }
-        return null;
-      })}
-
-      {/* Live reasoning */}
-      {reasoning && (
-        <ReasoningPanel thinking={reasoning} />
-      )}
-
-      {/* Live streaming output */}
-      {streamingText && (
-        <CodeBlock code={streamingText} language="bash" />
-      )}
-
+    <main style={{
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      padding: 20,
+      overflowY: "auto",
+      gap: 12,
+    }} data-testid="main-canvas">
       {/* Confirmation dialog */}
-      {pendingConfirm && (
-        <div
-          className="glass"
-          style={{
-            padding: 16,
-            borderRadius: 12,
-            border: "1px solid var(--neon-magenta)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-          }}
-          data-testid="confirm-dialog"
-        >
-          <div>
-            <span style={{ fontSize: 11, color: "var(--neon-magenta)", textTransform: "uppercase" }}>
-              {pendingConfirm.classification}
-            </span>
-            <p style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text)", marginTop: 4 }}>
-              {pendingConfirm.command}
-            </p>
-          </div>
+      {pending && (
+        <div style={{
+          background: "rgba(0,0,0,0.4)",
+          border: "1px solid #f59e0b",
+          borderRadius: 8,
+          padding: 16,
+        }}>
+          <p style={{ fontSize: 11, color: "#f59e0b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+            Confirmation Required — {pending.classification}
+          </p>
+          <pre style={{
+            fontFamily: "monospace",
+            fontSize: 13,
+            color: "#fff",
+            background: "rgba(0,0,0,0.3)",
+            padding: 10,
+            borderRadius: 4,
+            overflowX: "auto",
+            whiteSpace: "pre-wrap",
+            marginBottom: 12,
+          }}>
+            {pending.command}
+          </pre>
           <div style={{ display: "flex", gap: 8 }}>
             <button
               onClick={handleApprove}
-              data-testid="confirm-run"
               style={{
-                padding: "8px 18px",
-                borderRadius: 8,
-                background: "var(--neon-cyan)",
-                color: "#000",
+                padding: "8px 20px",
+                borderRadius: 6,
+                background: "#22c55e",
+                color: "#fff",
                 border: "none",
                 cursor: "pointer",
+                fontSize: 13,
                 fontWeight: 600,
               }}
             >
-              CONFIRM
+              Confirm
             </button>
             <button
               onClick={handleDeny}
-              data-testid="cancel-run"
               style={{
-                padding: "8px 18px",
-                borderRadius: 8,
+                padding: "8px 20px",
+                borderRadius: 6,
                 background: "transparent",
-                color: "var(--neon-magenta)",
-                border: "1px solid var(--neon-magenta)",
+                color: "#888",
+                border: "1px solid rgba(255,255,255,0.1)",
                 cursor: "pointer",
+                fontSize: 13,
               }}
             >
-              CANCEL
+              Cancel
             </button>
           </div>
         </div>
       )}
 
-      {/* Default placeholder when idle */}
-      {messages.length === 0 && !reasoning && !streamingText && !pendingConfirm && (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, color: "var(--muted)" }}>
-          <span style={{ fontSize: 48 }}>🤖</span>
-          <p style={{ fontSize: 14 }}>Select a workspace and send a prompt to begin</p>
+      {/* Command output history */}
+      {entries.map(entry => (
+        <div key={entry.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: entry.exitCode === 0 ? "#22c55e" : "#ef4444" }}>
+              {entry.exitCode === 0 ? "✓" : "✗"} exit {entry.exitCode}
+            </span>
+          </div>
+          {entry.output && (
+            <pre style={{
+              fontFamily: "monospace",
+              fontSize: 13,
+              color: "#d4d4d4",
+              background: "rgba(0,0,0,0.3)",
+              padding: 12,
+              borderRadius: 6,
+              overflowX: "auto",
+              whiteSpace: "pre-wrap",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}>
+              {entry.output}
+            </pre>
+          )}
+        </div>
+      ))}
+
+      {/* Empty state */}
+      {entries.length === 0 && !pending && (
+        <div style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#444",
+          gap: 8,
+        }}>
+          <span style={{ fontSize: 40 }}>▶</span>
+          <p style={{ fontSize: 14 }}>Type a command below to get started</p>
         </div>
       )}
     </main>
