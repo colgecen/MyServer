@@ -1,2 +1,5 @@
-import { check } from "@tauri-apps/plugin-updater";
-export async function checkUpdate(){ try{ const u=await check(); if(u?.available) await u.downloadAndInstall(); }catch(e){ console.error(e);} }
+// Auto-updater stub — requires @tauri-apps/plugin-updater
+export async function checkUpdate() {
+  // Placeholder: Tauri updater plugin not installed
+  console.info("Updater: Tauri updater plugin not configured");
+}

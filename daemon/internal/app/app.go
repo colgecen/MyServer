@@ -5,16 +5,21 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/coder/websocket"
 
 	"github.com/anomalyco/myserver/daemon/internal/exec"
+	"github.com/anomalyco/myserver/daemon/internal/guardrail"
 	"github.com/anomalyco/myserver/daemon/internal/indexer"
+	"github.com/anomalyco/myserver/daemon/internal/llm"
 	"github.com/anomalyco/myserver/daemon/internal/protocol"
 	"github.com/anomalyco/myserver/daemon/internal/server"
+	"github.com/anomalyco/myserver/daemon/internal/store"
 	"github.com/anomalyco/myserver/daemon/internal/workspace"
 )
 
@@ -22,17 +27,24 @@ import (
 type App struct {
 	srv      *server.HTTPServer
 	execEng  *exec.Engine
+	safeExec *guardrail.SafeExec
 	indexSvc *indexer.Service
+	llmClnt  *llm.Client
+	store    *store.KV
+	ws       *workspace.Workspace
 
-	mu    sync.Mutex
-	ws    *workspace.Workspace
+	mu   sync.Mutex
+	user string
 }
 
 // New wires everything together.
-func New(srv *server.HTTPServer) *App {
+func New(srv *server.HTTPServer, audit *store.KV) *App {
+	safeExec := guardrail.NewWithRateLimit(guardrail.DefaultRateLimit())
+
 	a := &App{
-		srv:     srv,
-		execEng: exec.NewEngine(),
+		srv:      srv,
+		execEng:  exec.NewEngine(),
+		safeExec: safeExec,
 		indexSvc: indexer.NewService(
 			indexer.NewOllamaEmbedder("", ""),
 			func(p indexer.Progress) {
@@ -42,6 +54,12 @@ func New(srv *server.HTTPServer) *App {
 				}
 			},
 		),
+		llmClnt: llm.New(""),
+		store:   audit,
+		user:    os.Getenv("USER"),
+	}
+	if a.user == "" {
+		a.user = "unknown"
 	}
 	srv.OnMessage(a.handleMessage)
 	return a
@@ -87,6 +105,14 @@ func (a *App) handleMessage(ctx context.Context, c *websocket.Conn, raw []byte) 
 		}
 		go a.execCommand(ctx, c, &env, req)
 
+	case protocol.ActionExecApprove:
+		var req protocol.ExecApprove
+		if err := env.Decode(&req); err != nil {
+			a.reply(ctx, c, protocol.NewError(env.ID, "E_PAYLOAD", err.Error()))
+			return
+		}
+		a.approveExec(ctx, c, env.ID, req)
+
 	default:
 		a.reply(ctx, c, protocol.NewError(env.ID, "E_ACTION", "unsupported action: "+string(env.Action)))
 	}
@@ -131,9 +157,87 @@ func (a *App) indexWorkspace(c *websocket.Conn, id, path string) {
 	})))
 }
 
-// execCommand runs a command inside the sandboxed workdir and streams output.
+// approveExec handles user confirmation for Level 1/2 commands.
+func (a *App) approveExec(ctx context.Context, c *websocket.Conn, id string, req protocol.ExecApprove) {
+	storedReq, class, err := a.safeExec.Approve(req.RequestID, req.Approve)
+	if err != nil {
+		a.reply(ctx, c, must(protocol.NewResponse(id, protocol.ExecResponse{
+			Status:  "error",
+			Message: err.Error(),
+		})))
+		return
+	}
+	if storedReq == nil {
+		a.reply(ctx, c, must(protocol.NewResponse(id, protocol.ExecResponse{
+			Status:  "error",
+			Message: "request not found or expired",
+		})))
+		return
+	}
+	if !req.Approve {
+		a.reply(ctx, c, must(protocol.NewResponse(id, protocol.ExecResponse{
+			Status:  "denied",
+			Message: "command denied by user",
+		})))
+		return
+	}
+
+	// Execute the approved command
+	// Send immediate response so client knows approval was accepted
+	a.reply(ctx, c, must(protocol.NewResponse(id, protocol.ExecResponse{
+		Status:  "approved",
+		Message: "command approved, executing...",
+		Level:   int(class.Level),
+	})))
+
+	workdir := storedReq.Workdir
+	if workdir != "" && a.currentWS() != nil {
+		resolved, err := a.currentWS().Resolve(workdir)
+		if err != nil {
+			a.reply(ctx, c, must(protocol.NewResponse(id, protocol.ExecResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})))
+			return
+		}
+		workdir = resolved
+	}
+
+	go func() {
+		origID := storedReq.ID
+		_, _ = a.execEng.Run(ctx, exec.Options{
+			Command: storedReq.Command,
+			Workdir: workdir,
+		}, func(ev exec.StreamEvent) {
+			stream, err := protocol.NewStream(origID, protocol.ExecStreamEvent{
+				RequestID: origID,
+				Stream:    ev.Stream,
+				Data:      ev.Data,
+				ExitCode:  iPtr(ev.ExitCode),
+				Done:      ev.Done,
+				Err:       errText(ev.Err),
+			})
+			if err != nil {
+				return
+			}
+			a.reply(ctx, c, stream)
+		})
+		// Record result to audit log
+		a.safeExec.RecordResult(ctx, storedReq.Command, class.Level, "executed", nil, 0)
+	}()
+}
+
+// execCommand runs a command through SafeExec guardrail before execution.
 func (a *App) execCommand(ctx context.Context, c *websocket.Conn, env *protocol.Envelope, req protocol.ExecRequest) {
-	// resolve workdir through the workspace sandbox when one is active
+	// Build guardrail request
+	grReq := guardrail.Request{
+		ID:       env.ID,
+		ClientID: env.ID,
+		Command:  req.Command,
+		Workdir:  req.Workdir,
+	}
+
+	// Resolve workdir through workspace sandbox
 	workdir := req.Workdir
 	if workdir != "" && a.currentWS() != nil {
 		resolved, err := a.currentWS().Resolve(workdir)
@@ -144,15 +248,60 @@ func (a *App) execCommand(ctx context.Context, c *websocket.Conn, env *protocol.
 		workdir = resolved
 	}
 
-	a.reply(ctx, c, must(protocol.NewResponse(env.ID, protocol.ExecResponse{Status: "ok", Level: 0})))
+	// Evaluate through guardrail
+	outcome := a.safeExec.Evaluate(grReq)
 
+	switch outcome.Decision {
+	case guardrail.DecisionExecute:
+		// Level 0 - auto-execute
+		a.reply(ctx, c, must(protocol.NewResponse(env.ID, protocol.ExecResponse{
+			Status: "ok",
+			Level:  int(outcome.Class.Level),
+		})))
+		a.runExec(ctx, c, env.ID, req.Command, req.Shell, workdir)
+
+	case guardrail.DecisionConfirm:
+		// Level 1/2 - requires user confirmation
+		a.reply(ctx, c, must(protocol.NewResponse(env.ID, protocol.ExecResponse{
+			Status:  "pending",
+			Level:   int(outcome.Class.Level),
+			Message: fmt.Sprintf("Command requires confirmation (level: %s)", outcome.Class.Level),
+		})))
+		// Emit confirmation event to GUI
+		ev, _ := protocol.NewEvent(protocol.ActionExecCommand, map[string]any{
+			"request_id": env.ID,
+			"command":    req.Command,
+			"level":      int(outcome.Class.Level),
+			"classification": outcome.Class.Level.String(),
+		})
+		a.reply(ctx, c, ev)
+
+	case guardrail.DecisionDeny:
+		// Blacklist match
+		a.reply(ctx, c, must(protocol.NewResponse(env.ID, protocol.ExecResponse{
+			Status:  "denied",
+			Message: outcome.Message,
+			Level:   int(outcome.Class.Level),
+		})))
+
+	case guardrail.DecisionCooldown:
+		// Rate limited
+		a.reply(ctx, c, must(protocol.NewResponse(env.ID, protocol.ExecResponse{
+			Status:  "error",
+			Message: outcome.Message,
+		})))
+	}
+}
+
+// runExec executes a command directly (after guardrail approval).
+func (a *App) runExec(ctx context.Context, c *websocket.Conn, id, command, shell, workdir string) {
 	_, _ = a.execEng.Run(ctx, exec.Options{
-		Command: req.Command,
-		Shell:   req.Shell,
+		Command: command,
+		Shell:   shell,
 		Workdir: workdir,
 	}, func(ev exec.StreamEvent) {
-		stream, err := protocol.NewStream(env.ID, protocol.ExecStreamEvent{
-			RequestID: env.ID,
+		stream, err := protocol.NewStream(id, protocol.ExecStreamEvent{
+			RequestID: id,
 			Stream:    ev.Stream,
 			Data:      ev.Data,
 			ExitCode:  iPtr(ev.ExitCode),
